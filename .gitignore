@@ -1,0 +1,12 @@
+env/
+.env
+__pycache__/
+*/__pycache__/
+notes/
+*.md
+*.txt
+*.pdf
+*.docx
+*.doc
+*.xls
+*.xlsx
