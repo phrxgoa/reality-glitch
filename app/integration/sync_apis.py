@@ -1,15 +1,20 @@
 import os
 import time
+import sys
+from pathlib import Path
 from dotenv import load_dotenv
 
+# Add the parent directory to sys.path
+sys.path.append(str(Path(__file__).parent.parent))
+
 # Import API wrappers
-from wrapper_fmp import FmpAPI
-from wrapper_weather import WeatherAPI
-from wrapper_coinmarket import CoinMarketCapAPI
+from integration.wrapper_fmp import FmpAPI
+from integration.wrapper_weather import WeatherAPI
+from integration.wrapper_coinmarket import CoinMarketCapAPI
 
 # Import database utilities
-from db_utils import save_fmp_index_data, save_weather_data, save_bitcoin_data
-from db_operations import DatabaseOperations
+from db.db_utils import save_fmp_index_data, save_weather_data, save_bitcoin_data
+from db.db_operations import DatabaseOperations
 
 # Load environment variables
 load_dotenv()

@@ -1,10 +1,10 @@
 from datetime import datetime, timedelta
 from prompt_toolkit import PromptSession
-from wrapper_coinmarket import CoinMarketCapAPI
-from wrapper_fmp import FmpAPI
-from wrapper_weather import WeatherAPI
-from db_operations import DatabaseOperations
-from sync_apis import SyncApis
+from integration.wrapper_coinmarket import CoinMarketCapAPI
+from integration.wrapper_fmp import FmpAPI
+from integration.wrapper_weather import WeatherAPI
+from db.db_operations import DatabaseOperations
+from integration.sync_apis import SyncApis
 
 class RealityGlitchGame:        
     def __init__(self):
@@ -133,8 +133,6 @@ class RealityGlitchGame:
     
     def process_command(self, command):
         """Process user commands."""
-        # Check if we need to sync before processing any command
-        self.check_and_sync()
         
         command = command.strip()
         

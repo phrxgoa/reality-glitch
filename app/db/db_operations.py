@@ -1,4 +1,4 @@
-from db_utils import DatabaseConnection, update_last_sync_time
+from db.db_utils import DatabaseConnection, update_last_sync_time
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 

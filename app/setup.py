@@ -1,5 +1,5 @@
 import json
-from wrapper_groq import GroqClient
+from integration.wrapper_groq import GroqClient
 
 if __name__ == "__main__":
     client = GroqClient()
