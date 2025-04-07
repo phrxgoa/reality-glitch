@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
-from prompt_toolkit import PromptSession
+import blessed
+import sys
 from integration.wrapper_coinmarket import CoinMarketCapAPI
 from integration.wrapper_fmp import FmpAPI
 from integration.wrapper_weather import WeatherAPI
@@ -9,8 +10,9 @@ from integration.sync_apis import SyncApis
 class RealityGlitchGame:        
     def __init__(self):
         """Initialize the game and its components."""
-        self.session = PromptSession()        
         self.db_ops = DatabaseOperations()
+        self.running = True
+        self.term = blessed.Terminal()
         
         # Check if this is the first run and sync with APIs if needed
         if self.db_ops.is_first_run():
@@ -33,11 +35,17 @@ class RealityGlitchGame:
     def display_welcome(self):
         """Display the welcome message."""
         print("=== REALITYGLITCH ACTIVATED ===")
-        print("Type /help for commands. Ctrl+C to exit.\n")
+        print("Press F1 for help. Press Esc to exit.\n")
     
     def display_help(self):
         """Display available commands."""
-        print("Commands: /btc, /stocks, /weather, /panic, /exit")
+        print("=== KEYBOARD CONTROLS ===")
+        print("F1: Display this help")
+        print("F2: Check Bitcoin price")
+        print("F3: Check stock market")
+        print("F4: Check weather")
+        print("F5: Trigger panic event")
+        print("Esc: Exit game")
     
     def bitcoin(self):
         """Check and display current Bitcoin price and changes."""
@@ -131,43 +139,31 @@ class RealityGlitchGame:
         else:
             print("ERROR: Unable to fetch weather data. Reality might be glitching...")
     
-    def process_command(self, command):
-        """Process user commands."""
-        
-        command = command.strip()
-        
-        if command == "/help":
+    def handle_key(self, key):
+        """Handle key press events."""
+        if key.name == 'KEY_F1':
             self.display_help()
-        elif command == "":
-            pass  # Do nothing for empty input
-        elif command == "/exit":
-            print("ERROR 666: ESCAPE DENIED. JUST KIDDING. BYE.")
-            return False
-        elif command == "/btc":
+        elif key.name == 'KEY_F2':
             self.bitcoin()
-        elif command == "/stocks":
+        elif key.name == 'KEY_F3':
             self.stocks()
-        elif command == "/weather":
+        elif key.name == 'KEY_F4':
             self.weather()
-        elif command == "/panic":
+        elif key.name == 'KEY_F5':
             self.trigger_panic()
-        else:
-            print(f"SYNTAX ERROR: '{command}' is chaos... but unrecognized.")
-        
-        return True
+        elif key.name == 'KEY_ESCAPE':
+            print("\nERROR 666: ESCAPE DENIED. JUST KIDDING. BYE.")
+            self.running = False
     
     def run(self):
         """Run the main game loop."""
         self.display_welcome()
         
-        running = True
-        while running:
-            try:
-                user_input = self.session.prompt("> ")
-                running = self.process_command(user_input)
-            except KeyboardInterrupt:
-                print("\nWARNING: REALITY REASSEMBLING...")
-                break
+        # Set terminal to raw mode
+        with self.term.cbreak(), self.term.hidden_cursor():
+            while self.running:
+                key = self.term.inkey()
+                self.handle_key(key)
 
 def start_game_cli():
     """Entry point for the game."""
