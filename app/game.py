@@ -1,39 +1,34 @@
+from datetime import datetime, timedelta
 from prompt_toolkit import PromptSession
 from wrapper_coinmarket import CoinMarketCapAPI
 from wrapper_fmp import FmpAPI
 from wrapper_weather import WeatherAPI
+from db_operations import DatabaseOperations
+from sync_apis import SyncApis
 
 class RealityGlitchGame:        
     def __init__(self):
         """Initialize the game and its components."""
-        self.session = PromptSession()
-        self.btc_api = None
-        self.stocks_api = None
-        self.weather_api = None
-        self.initialize_apis()
+        self.session = PromptSession()        
+        self.db_ops = DatabaseOperations()
+        
+        # Check if this is the first run and sync with APIs if needed
+        if self.db_ops.is_first_run():
+            print("First run detected. Syncing with APIs...")
+            sync = SyncApis()
+            sync.sync_all()
+            print("Initial sync completed.")
+        else:
+            # Check if we need to sync on startup
+            self.check_and_sync()
     
-    def initialize_apis(self):
-        """Initialize external APIs and services."""
-        try:
-            self.btc_api = CoinMarketCapAPI()
-        except ValueError as e:
-            print(f"ERROR: {e}")
-            print("REALITY GLITCH: Unable to initialize cryptocurrency tracking.")
-            self.btc_api = None
-            
-        try:
-            self.stocks_api = FmpAPI()
-        except ValueError as e:
-            print(f"ERROR: {e}")
-            print("REALITY GLITCH: Unable to initialize stock market tracking.")
-            self.stocks_api = None
-            
-        try:
-            self.weather_api = WeatherAPI()
-        except ValueError as e:
-            print(f"ERROR: {e}")
-            print("REALITY GLITCH: Unable to initialize weather tracking.")
-            self.weather_api = None
+    def check_and_sync(self):
+        """Check if 10 minutes have passed since last sync and sync if needed."""
+        last_sync = self.db_ops.get_last_sync_time()           
+        if not last_sync or (datetime.now() - last_sync) > timedelta(minutes=10):        
+            print("Syncing with APIs...")
+            sync = SyncApis()
+            sync.sync_all()
     
     def display_welcome(self):
         """Display the welcome message."""
@@ -46,17 +41,26 @@ class RealityGlitchGame:
     
     def bitcoin(self):
         """Check and display current Bitcoin price and changes."""
-        if not self.btc_api:
-            print("ERROR: Cryptocurrency tracking is not available. Reality is too glitched.")
-            return
-            
-        btc_data = self.btc_api.get_bitcoin_data()
+        btc_data = self.db_ops.get_latest_bitcoin_data()
         if btc_data:
             print("=== BITCOIN VALUE ===")
-            price = btc_data["price"]
+            price = btc_data["price_usd"]
             change_1h = btc_data["percent_change_1h"]
             change_24h = btc_data["percent_change_24h"]
             last_updated = btc_data["last_updated"]
+            
+            # Format timestamp
+            try:
+                if isinstance(last_updated, datetime):
+                    dt = last_updated
+                else:
+                    dt = datetime.strptime(str(last_updated), "%Y-%m-%d %H:%M:%S.%f")
+                formatted_time = dt.strftime("%d/%m/%Y %H:%M:%S")
+                last_updated = formatted_time
+            except (ValueError, TypeError) as e:
+                # Keep original timestamp if formatting fails
+                pass
+                
             print(f"BTC price: ${price:,.2f}")
             print(f"1h change: {change_1h:.2f}%")
             print(f"24h change: {change_24h:.2f}%")
@@ -70,13 +74,22 @@ class RealityGlitchGame:
     
     def stocks(self):
         """Check and display current stock market indices."""
-        if not self.stocks_api:
-            print("ERROR: Stock market tracking is not available. Reality is too glitched.")
-            return
-            
-        indices_data = self.stocks_api.get_index_quotes()
+        indices_data = self.db_ops.get_latest_stock_data()
         if indices_data:
-            print("=== STOCK MARKET INDICES ===")
+            print("=== STOCK MARKET INDICES ===")                    
+            if indices_data:
+                timestamp = indices_data[0]["timestamp"]
+                try:                    
+                    if isinstance(timestamp, datetime):
+                        dt = timestamp
+                    else:                        
+                        dt = datetime.strptime(str(timestamp), "%Y-%m-%d %H:%M:%S.%f")                                        
+                    formatted_time = dt.strftime("%d/%m/%Y %H:%M:%S")
+                    print(f"Last updated: {formatted_time}")
+                except (ValueError, TypeError) as e:                    
+                    print(f"Last updated: {timestamp}")
+                    print(f"Error: {e}")
+            
             for index in indices_data:
                 symbol = index["symbol"]
                 price = index["price"]
@@ -92,20 +105,37 @@ class RealityGlitchGame:
     
     def weather(self):
         """Check and display current weather data."""
-        if not self.weather_api:
-            print("ERROR: Weather tracking is not available. Reality is too glitched.")
-            return
-            
-        weather_data = self.weather_api.get_weather_data()
+        weather_data = self.db_ops.get_latest_weather_data()
         if weather_data:
             print("=== WEATHER DATA ===")
-            print("Raw weather data:")
-            print(weather_data)
+            print(f"Location: {weather_data['location_name']}, {weather_data['region']}, {weather_data['country']}")
+            print(f"Temperature: {weather_data['temperature_c']}°C (feels like {weather_data['feels_like_c']}°C)")
+            print(f"Wind: {weather_data['wind_kph']} km/h {weather_data['wind_direction']}")
+            print(f"Humidity: {weather_data['humidity']}%")
+            print(f"UV Index: {weather_data['uv_index']}")
+            
+            # Format timestamp
+            last_updated = weather_data['last_updated']
+            try:
+                if isinstance(last_updated, datetime):
+                    dt = last_updated
+                else:
+                    dt = datetime.strptime(str(last_updated), "%Y-%m-%d %H:%M:%S.%f")
+                formatted_time = dt.strftime("%d/%m/%Y %H:%M:%S")
+                last_updated = formatted_time
+            except (ValueError, TypeError) as e:
+                # Keep original timestamp if formatting fails
+                pass
+                
+            print(f"Last updated: {last_updated}")
         else:
             print("ERROR: Unable to fetch weather data. Reality might be glitching...")
     
     def process_command(self, command):
         """Process user commands."""
+        # Check if we need to sync before processing any command
+        self.check_and_sync()
+        
         command = command.strip()
         
         if command == "/help":

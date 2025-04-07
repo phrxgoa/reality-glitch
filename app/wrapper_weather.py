@@ -62,19 +62,16 @@ class WeatherAPI:
                     "country": data["location"].get("country"),
                     "lat": data["location"].get("lat"),
                     "lon": data["location"].get("lon"),
-                    "localtime": data["location"].get("localtime")
+                    "location_time": data["location"].get("localtime")
                 }
             
             if "current" in data:
                 result["current"] = {
-                    "temp_c": data["current"].get("temp_c"),
-                    "temp_f": data["current"].get("temp_f"),
-                    "condition": data["current"].get("condition", {}).get("text"),
+                    "temp_c": data["current"].get("temp_c"),                                        
                     "wind_kph": data["current"].get("wind_kph"),
                     "wind_dir": data["current"].get("wind_dir"),
                     "humidity": data["current"].get("humidity"),
-                    "feelslike_c": data["current"].get("feelslike_c"),
-                    "feelslike_f": data["current"].get("feelslike_f"),
+                    "feelslike_c": data["current"].get("feelslike_c"),                    
                     "uv": data["current"].get("uv"),
                     "last_updated": data["current"].get("last_updated")
                 }

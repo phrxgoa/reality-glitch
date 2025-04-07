@@ -8,8 +8,7 @@ class FmpAPI:
         """Initialize the API with credentials from environment variables."""
         load_dotenv()
         self.api_key = os.getenv("FMP_API_KEY")
-        self.base_url = os.getenv("FMP_ENDPOINT")
-        
+        self.base_url = os.getenv("FMP_ENDPOINT")        
         if not self.api_key or not self.base_url:
             raise ValueError("Missing required environment variables for FMP API")
     
