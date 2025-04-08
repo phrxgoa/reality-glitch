@@ -1,70 +1,63 @@
 #!/bin/bash
 
+# --- Colors and formatting ---
+CYAN='\033[0;36m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
 # --- Store the PID of the background scheduler ---
 scheduler_pid=""
 
 # Function to clean up Docker containers AND the scheduler
 cleanup() {
-    echo "Cleaning up..."
-
+    tput cnorm # Restore cursor
+    echo -e "${CYAN}Reality coherence restored. Synchronization complete.${NC}" > /dev/tty
+    
     # Stop the background scheduler process if its PID was stored
     if [ ! -z "$scheduler_pid" ]; then
-        echo "Stopping scheduler (PID: $scheduler_pid)..."
-        # Send SIGTERM first (graceful shutdown), then SIGKILL if needed
         kill $scheduler_pid 2>/dev/null || kill -9 $scheduler_pid 2>/dev/null
     fi
 
-    echo "Stopping Docker containers..."
-    # Use docker compose down with timeout, ignore errors if already stopped
-    docker compose down --timeout 10 2>/dev/null || true
-
-    echo "Cleanup finished."
+    # Stop Docker containers silently
+    docker compose down --timeout 10 > /dev/null 2>&1 || true
+    
     exit 0
 }
 
 # Set up error handling and cleanup on exit/interrupt signals
 set -e
-trap cleanup SIGINT SIGTERM EXIT # EXIT trap ensures cleanup runs even if game finishes normally
+trap cleanup SIGINT SIGTERM EXIT
 
-# Check if Docker is running
+# --- Main script execution ---
+
+# Check if Docker is running (without visible output)
 if ! docker info > /dev/null 2>&1; then
-    echo "Error: Docker is not running. Please start Docker and try again."
+    echo -e "${RED}Error: Docker is not running. Please start Docker and try again.${NC}" > /dev/tty
     exit 1
 fi
 
-# Check if virtual environment exists, if not create it
+# Create virtual environment silently
 if [ ! -d "env" ]; then
-    echo "Creating virtual environment..."
-    python3 -m venv env
+    python3 -m venv env > /dev/null 2>&1
 fi
 
 # Activate virtual environment
-echo "Activating virtual environment..."
 source env/bin/activate
 
-# Install requirements if needed
-# (Consider running this less often once installed, maybe check requirements.txt timestamp?)
+# Install requirements if needed (silently)
 if [ ! -f "env/.requirements_installed" ] || [ "requirements.txt" -nt "env/.requirements_installed" ]; then
-    echo "Installing/updating requirements..."
-    pip install -r requirements.txt
+    pip install -r requirements.txt > /dev/null 2>&1
     touch env/.requirements_installed
 fi
 
-# Build and start Docker containers
-echo "Building and starting Docker containers..."
-docker compose build --no-cache && docker compose up -d --remove-orphans
+# Build and start Docker containers silently
+docker compose build --no-cache > /dev/null 2>&1 && docker compose up -d --remove-orphans > /dev/null 2>&1
 
 # --- Run the scheduler in the background ---
-echo "Starting the scheduler in the background..."
-python app/integration/api_scheduler.py &
-
-# --- Capture the PID of the background scheduler ---
+python app/integration/api_scheduler.py > /dev/null 2>&1 &
 scheduler_pid=$!
-echo "Scheduler started with PID: $scheduler_pid"
-
-# Allow a moment for scheduler to start
-sleep 2
 
 # Run the game in the foreground
-echo "Starting the game..."
 python app/game.py

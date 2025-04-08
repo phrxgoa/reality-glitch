@@ -4,16 +4,15 @@ import re
 import json
 from groq import Groq
 from story_summarizer import StorySummarizer
+from integration.reality_data import RealityData
 import datetime
 import blessed
+import random
 
 # Configuration
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 INITIAL_STORY = """
-Late one night, you hear a faint shimmer - like reality itself developing a hiccup - from your least favorite corner of the apartment. 
-From this cosmic belch emerge three creatures that make your old sleep paralysis demon look like a cuddly teddy bear. 
-They're clutching a device that sparks with the enthusiasm of a dying firefly, their mismatched eyes wide with the kind of terror 
-usually reserved for people who realize they've left the stove on... in another galaxy. What's your move?
+At 2:37 AM, your apartment's ambient radiation detector sounds a low-level alert. Simultaneously, your electronic devices power cycle. Through your window, an iridescent light silently descends into the parking lot. When it dissipates, three humanoid figures of varying heights stand beneath the sodium lamps. Their environmental suits suggest non-Earth origin, with breathing apparatus and protective layers against unknown contaminants. One holds a device emitting regular pulses of coherent light—possibly a scanning or communication tool. They approach your door with methodical precision, their movements suggesting purposeful intent rather than threat. What course of action will you take?
 """
 
 # Define save file paths - save in app/saved_games directory
@@ -24,8 +23,8 @@ DEFAULT_SAVE_FILE = os.path.join(SAVE_DIR, "story_save.json")
 os.makedirs(SAVE_DIR, exist_ok=True)
 
 SYSTEM_PROMPT = f"""
-You are a sardonic game master with a PhD in cosmic horror and a minor in stand-up comedy.
-Craft a suspenseful sci-fi narrative with dark humor elements based on this premise: "{INITIAL_STORY}".
+You are a meticulous science fiction author in the tradition of Isaac Asimov, Arthur C. Clarke, and Frank Herbert.
+Craft a logical, scientifically plausible narrative based on this premise: "{INITIAL_STORY}".
 
 CRITICAL: You MUST maintain EXACT format for EVERY response in this conversation:
 
@@ -45,18 +44,20 @@ Format Rules:
 - NEVER skip the format even after several exchanges
 
 Content Guidelines:
-- Story should be suspenseful with dark humor elements
-- Choices should be meaningful and consequential
-- Maintain consistent tone throughout all interactions
+- Adhere to hard science fiction principles: use real scientific concepts and logical extrapolations
+- Focus on technological implications, scientific accuracy, and logical consequences
+- Maintain narrative consistency with previously established details
+- Approach anomalous occurrences with rational explanations grounded in theoretical science
+- Avoid supernatural explanations, magical elements, or fantasy tropes
 - Keep track of player's previous choices for narrative continuity
 
 Example Perfect Response:
-Story: The tallest alien makes a sound like a theremin being strangled. Their device sputters, casting shadows that move in ways shadows definitely shouldn't. From the kitchen, your microwave suddenly displays numbers in base-13.
+Story: The tallest visitor makes a series of clicks and whistles that your ears interpret as language through some unknown mechanism. Their device emits controlled electromagnetic pulses, causing your microwave's display to cycle through numerical sequences—likely an attempt at establishing a mathematical basis for communication.
 
 Choices:
-1. Offer them your questionable leftover pizza from last Tuesday
-2. Throw the device into the fishtank and hope for the best
-3. Try to communicate using interpretive dance inspired by your high school talent show
+1. Retrieve your tablet and open a graphing calculator app to demonstrate basic mathematical principles
+2. Examine the visitors' device more closely to identify its components and operating principles
+3. Draw a simple diagram of our solar system to establish common astronomical knowledge
 """
 
 class StoryEngine:
@@ -69,18 +70,21 @@ class StoryEngine:
         ]
         self.current_story = INITIAL_STORY
         self.current_choices = []
-        self.debug = debug  # Debug flag to control logging
-        self.summarizer = StorySummarizer(debug=self.debug)  # Add story summarizer
+        self.debug = debug  # Debug flag to control logging, but we'll suppress most output anyway
+        self.summarizer = StorySummarizer(debug=False)  # Force debug off for summarizer
+        self.reality_data = RealityData(debug=False)  # Force debug off for reality data
         self.summary_count = 0  # Track number of summaries performed
         self.save_id = None  # Current save identifier
         self.term = blessed.Terminal()  # Add terminal for visual effects
+        self.typewriter_active = False  # Flag to track if typewriter animation is currently playing
         
-        # Simplified color scheme inspired by terminal aesthetics
+        # Enhanced color scheme for better sci-fi aesthetics
         self.text_color = self.term.teal  # Main text color
         self.highlight = self.term.white  # For emphasis
         self.dim = self.term.dim  # For less important text
         self.warning = self.term.yellow  # For warnings/important info
         self.error = self.term.red  # For errors
+        self.anomaly = self.term.bright_magenta  # For reality glitches
     
     def draw_border(self, x, y, width, height, title=""):
         """Draw a fancy border around text"""
@@ -97,28 +101,112 @@ class StoryEngine:
         # Bottom border
         print(self.term.move_xy(x, y+height-1) + "╚" + "═" * (width-2) + "╝")
     
-    def typewriter_effect(self, text, delay=0.02, style=None):
-        """Clean typewriter effect with monospace text"""
+    def typewriter_effect(self, text, delay=0.02, style=None, glitch_chance=0.005, x=None, y=None):
+        """Advanced typewriter effect with occasional glitches for sci-fi immersion"""
+        self.typewriter_active = True  # Set the flag that typewriter is active
+        
         if style is None:
             style = self.text_color
+        
+        # Characters that pause for dramatic effect    
+        pause_chars = ['.', '!', '?', ':', ';']
+        
+        # Flush any existing input before starting
+        self._flush_input()
+        
+        try:
+            current_x = x  # Track current x position if provided
             
-        for char in text:
-            if char in ['.', '!', '?']:
-                delay_time = delay * 2
-            else:
-                delay_time = delay
+            for i, char in enumerate(text):
+                # Move to position if coordinates provided
+                if x is not None and y is not None:
+                    print(self.term.move_xy(current_x, y), end='')
+                    
+                # Every 5 characters, flush any pending input
+                if i % 5 == 0:
+                    self._flush_input()
                 
-            print(style + char + self.term.normal, end='', flush=True)
-            time.sleep(delay_time)
-        print()
+                # Determine the delay for this character
+                if char in pause_chars:
+                    delay_time = delay * 3  # Longer pause at punctuation
+                else:
+                    delay_time = delay
+                    
+                # Occasional glitch effect (random character replacement or color change)
+                if random.random() < glitch_chance:
+                    # Choose a glitch type
+                    glitch_type = random.choice(['char', 'color', 'flicker'])
+                    
+                    if glitch_type == 'char':
+                        # Replace with a random "glitchy" character
+                        glitch_chars = "▒▓█░▄▀▐▌┌┐└┘│┤╡╢╖╕╣║╗╝╜╛┴┬┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌"
+                        if x is not None and y is not None:
+                            print(self.term.move_xy(current_x, y), end='')
+                        print(self.anomaly + random.choice(glitch_chars) + self.term.normal, end='', flush=True)
+                        time.sleep(delay_time * 0.5)  # Shorter delay for glitch
+                        if x is not None and y is not None:
+                            print(self.term.move_xy(current_x, y), end='')
+                        
+                        # Flush input that might have arrived during this effect
+                        self._flush_input()
+                    
+                    elif glitch_type == 'color':
+                        # Show the character in glitch color
+                        print(self.anomaly + char + self.term.normal, end='', flush=True)
+                        if x is not None:
+                            current_x += 1
+                    
+                    elif glitch_type == 'flicker':
+                        # Flicker effect - rapidly show/hide
+                        if x is not None and y is not None:
+                            print(self.term.move_xy(current_x, y), end='')
+                        print(' ', end='', flush=True)
+                        time.sleep(delay_time * 0.2)
+                        if x is not None and y is not None:
+                            print(self.term.move_xy(current_x, y), end='')
+                        time.sleep(delay_time * 0.1)
+                        
+                        # Flush input that might have arrived during this effect
+                        self._flush_input()
+                
+                # Print the actual character
+                print(style + char + self.term.normal, end='', flush=True)
+                if x is not None:
+                    current_x += 1
+                time.sleep(delay_time)
+                
+                # For longer pauses after punctuation, check for input more frequently
+                if char in pause_chars:
+                    # Flush input that might have arrived during the punctuation pause
+                    self._flush_input()
+            
+            if x is None:  # Only print newline if not using fixed position
+                print()
+            
+            # Final flush to clear any pending input that accumulated during the animation
+            self._flush_input()
+            
+            # Add a small delay before accepting input again
+            time.sleep(0.1)
+            self._flush_input()
+                
+        finally:
+            self.typewriter_active = False  # Reset the flag when animation is complete
+            
+    def _flush_input(self):
+        """Helper method to flush all pending terminal input"""
+        try:
+            # Keep reading keys with zero timeout until none left
+            while self.term.inkey(timeout=0):
+                pass
+        except Exception:
+            # Silently ignore any errors during flushing
+            pass
     
     def get_llm_context(self):
         """Get a compressed version of message history suitable for sending to the LLM.
         This keeps the full story context through summaries while limiting message count."""
         if len(self.messages) > 12:  # More than system prompt + summary + 5 pairs
-            if self.debug:
-                print(f"Compressing {len(self.messages)} messages for LLM context...")
-            
             # Keep system prompt
             system_prompt = self.messages[0]
             
@@ -134,21 +222,21 @@ class StoryEngine:
             # Add the most recent exchanges (last 5 pairs = 10 messages)
             compressed.extend(self.messages[-10:])
             
-            if self.debug:
-                print(f"Compressed to {len(compressed)} messages for LLM")
-            
             return compressed
         
         return self.messages
 
     def generate_story(self):
-        """Generate next story segment using Groq with improved formatting enforcement"""
+        """Generate next story segment using Groq with improved formatting enforcement and reality glitches"""
         try:
             # Get compressed context for LLM
             llm_context = self.get_llm_context()
             
-            if self.debug:
-                print(f"Generating story with {len(llm_context)} context messages")
+            # Enhance the system prompt with reality glitches
+            if llm_context and len(llm_context) > 0 and llm_context[0]["role"] == "system":
+                original_system_prompt = llm_context[0]["content"]
+                enhanced_system_prompt = self.reality_data.enhance_prompt(original_system_prompt)
+                llm_context[0]["content"] = enhanced_system_prompt
             
             # First attempt with regular prompt
             response = self.groq_client.chat.completions.create(
@@ -167,13 +255,20 @@ class StoryEngine:
             # Count the number of choices using regex
             choice_count = len(re.findall(r'(?:^|\n)\s*\d+\.', content))
             
-            # If format is correct and we have at least 3 choices, return as is
+            # If format is correct and we have at least 3 choices, enhance with reality glitches
             if has_story and has_choices and choice_count >= 3:
+                # Extract the story part and enhance it with reality glitches
+                story_match = re.search(r'Story:(.*?)(?:Choices:|$|\n\d+\.)', content, re.DOTALL)
+                if story_match:
+                    story_text = story_match.group(1).strip()
+                    enhanced_story_text = self.reality_data.enhance_story(story_text)
+                    
+                    # Replace the original story with the enhanced one
+                    content = content.replace(story_match.group(0), f"Story: {enhanced_story_text}")
+                
                 return content
                 
             # If format is not correct, try again with an enhanced prompt
-            if self.debug:
-                print("Response format incorrect, trying with explicit format reminder...")
             
             # Make a more explicit format reminder
             format_reminder = """
@@ -202,19 +297,28 @@ DO NOT use placeholder text in brackets. Replace with actual content.
             
             retry_content = retry_response.choices[0].message.content
             
+            # Extract and enhance the story part if available
+            story_match = re.search(r'Story:(.*?)(?:Choices:|$|\n\d+\.)', retry_content, re.DOTALL)
+            if story_match:
+                story_text = story_match.group(1).strip()
+                enhanced_story_text = self.reality_data.enhance_story(story_text)
+                
+                # Replace the original story with the enhanced one
+                retry_content = retry_content.replace(story_match.group(0), f"Story: {enhanced_story_text}")
+            
             # If second attempt still lacks proper format, force it
             if "Story:" not in retry_content or "Choices:" not in retry_content:
-                if self.debug:
-                    print("Still formatting incorrectly, forcing format...")
-                
                 # Extract any narrative content
                 story_text = retry_content
                 if not story_text.strip():
                     story_text = "The aliens look at you expectantly, their device flickering with an otherworldly glow."
                 
+                # Enhance the story with reality glitches
+                enhanced_story_text = self.reality_data.enhance_story(story_text)
+                
                 # Create forced format
                 forced_content = f"""
-Story: {story_text.strip()}
+Story: {enhanced_story_text.strip()}
 
 Choices:
 1. Try to communicate with the aliens
@@ -226,18 +330,18 @@ Choices:
             return retry_content
             
         except Exception as e:
-            print(f"\nThe universe glitches... (Error: {e})")
-            time.sleep(2)
-            return self.generate_story()  # Retry
+            # Instead of printing error, add subtle glitch effects
+            return """
+Story: The universe ripples around you, a momentary discontinuity in the fabric of reality. The figures' outlines blur and refocus as your perception stabilizes. Their devices emit an irregular pattern of light—possibly a response to the quantum fluctuation you both experienced.
+
+Choices:
+1. Wait calmly for the reality stabilization to complete
+2. Focus on the device's emission pattern to identify any mathematical sequence
+3. Ask the entities if they experienced the same distortion
+"""
     
     def parse_response(self, response):
         """Extract story and choices from response using multiple strategies"""
-        # Print the full response for debugging
-        if self.debug:
-            print("\n===== FULL LLM RESPONSE =====")
-            print(response)
-            print("=============================\n")
-        
         # Extract the story part using different possible formats
         story = ""
         story_match = re.search(r'Story:(.*?)(?:Choices:|$|\n\d+\.)', response, re.DOTALL)
@@ -252,11 +356,6 @@ Choices:
                 # Last resort - if no structure, take everything
                 story = response.strip()
         
-        if self.debug:
-            print("\n===== EXTRACTED STORY =====")
-            print(story)
-            print("==========================\n")
-        
         # Various strategies to extract choices
         choices = []
         
@@ -264,10 +363,6 @@ Choices:
         choices_section = re.search(r'Choices:(.*?)(?:$)', response, re.DOTALL)
         if choices_section:
             choices_text = choices_section.group(1).strip()
-            if self.debug:
-                print("\n===== CHOICES SECTION =====")
-                print(choices_text)
-                print("===========================\n")
             
             # First try a clean numbered list pattern
             numbered_choices = re.findall(r'^\s*(\d+)\.\s+(.*?)$', choices_text, re.MULTILINE)
@@ -278,8 +373,6 @@ Choices:
         
         # Strategy 2: Look for numbered choices in the entire response if needed
         if len(choices) < 3:
-            if self.debug:
-                print("Trying strategy 2: Extracting numbered choices from entire response")
             all_choices = re.findall(r'(?:^|\n)\s*(\d+)\.\s+(.*?)(?=\n\s*\d+\.|\n\n|$)', response, re.DOTALL)
             for _, choice_text in all_choices:
                 text = choice_text.strip()
@@ -289,8 +382,6 @@ Choices:
         
         # Strategy 3: Look for any lines that start with numbers
         if len(choices) < 3:
-            if self.debug:
-                print("Trying strategy 3: Extracting any lines starting with numbers")
             number_lines = re.findall(r'(?:^|\n)\s*(\d+)[\.:\)]\s+(.*?)(?=\n|$)', response, re.MULTILINE)
             for _, choice_text in number_lines:
                 text = choice_text.strip()
@@ -299,8 +390,6 @@ Choices:
         
         # Strategy 4: Extract any lines that might look like options
         if len(choices) < 3:
-            if self.debug:
-                print("Trying strategy 4: Looking for option-like patterns")
             option_lines = re.findall(r'(?:^|\n)(?:Option|Choice|You can).*?:\s+(.*?)(?=\n|$)', response, re.IGNORECASE | re.MULTILINE)
             for choice_text in option_lines:
                 text = choice_text.strip()
@@ -313,16 +402,8 @@ Choices:
         # Ensure we only use the first 3 choices
         choices = choices[:3]
         
-        if self.debug:
-            print("\n===== EXTRACTED CHOICES =====")
-            for i, choice in enumerate(choices, 1):
-                print(f"{i}. {choice}")
-            print("============================\n")
-        
         # If we still don't have enough valid choices, create contextual fallbacks
         if len(choices) < 3:
-            if self.debug:
-                print("Using fallback choices")
             # Create more contextual fallbacks based on the story content
             contextual_fallbacks = []
             
@@ -364,62 +445,262 @@ Choices:
         return story, choices[:3]
     
     def display_story(self):
-        """Display the current story and choices with clean terminal aesthetics"""
+        """Display the current story and choices with immersive sci-fi aesthetic"""
+        # Clear screen and hide cursor during setup
+        print(self.term.clear + self.term.home + self.term.hide_cursor)
+        
+        # Set up dimensions for our interface
+        terminal_width = self.term.width
+        terminal_height = self.term.height
+        
+        # Setup title and styling constants
+        title = "REALITY GLITCH PROTOCOL"
+        subtitle = "QUANTUM NARRATIVE INTERFACE"
+        
+        # Calculate box dimensions with some padding - make box wider and taller
+        box_width = min(terminal_width - 6, 110)  # Width of the outer box
+        content_width = box_width - 8             # Width available for content inside the box, including margins
+        text_area_width = content_width - 16      # Reduced width for actual text to ensure padding
+        
+        # First determine how much space the story and choices will take
+        story_lines = self._wrap_text(self.current_story, text_area_width)
+        story_height = len(story_lines)
+        
+        # Calculate height needs for choices - estimate 2 lines per choice with wrapping
+        estimated_choice_lines = 0
+        if self.current_choices:
+            for choice in self.current_choices:
+                choice_text = f"│#│ ▷ {choice}"  # Placeholder for number
+                wrapped_choice = self._wrap_text(choice_text, text_area_width - 6)  # Width for choices
+                estimated_choice_lines += len(wrapped_choice)
+        
+        # Add extra space for decorations, headers, separators and instructions
+        extra_space = 20  # For headers, footers, and other UI elements
+        total_content_height = story_height + estimated_choice_lines + extra_space
+        
+        # Calculate box height - make it larger to accommodate content
+        box_height = min(total_content_height + 4, terminal_height - 2)  # Add padding and ensure it fits in terminal
+        
+        # Center the box on screen
+        start_x = (terminal_width - box_width) // 2
+        start_y = (terminal_height - box_height) // 2
+        
+        # Draw the main UI box
+        self._draw_sci_fi_box(start_x, start_y, box_width, box_height, title)
+        
+        # Add subtitle
+        subtitle_x = start_x + (box_width - len(subtitle)) // 2        
+        print(self.term.move_xy(subtitle_x, start_y + 2) + self.highlight + subtitle + self.term.normal)
+        
+        # Add decorative elements (Matrix-style characters at top and bottom of box)
+        self._add_matrix_decoration(start_x + 2, start_y + 3, box_width - 4)
+        
+        # Display story content
+        content_start_y = start_y + 5  # Start content after decorations
+        
+        # Display timestamp and session info
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        timestamp_str = f"TIMESTAMP: {timestamp}"
+        timestamp_x = start_x + box_width - len(timestamp_str) - 4
+        print(self.term.move_xy(timestamp_x, content_start_y) + self.dim + timestamp_str + self.term.normal)
+        
+        session_id = hex(hash(str(self.messages[0])))[2:10]
+        session_str = f"SESSION: {session_id}"
+        session_x = start_x + 4
+        print(self.term.move_xy(session_x, content_start_y) + self.dim + session_str + self.term.normal)
+        
+        content_start_y += 2
+        
+        # Reset cursor to normal for the rest of the display
+        print(self.term.normal_cursor)
+        
         if not self.current_choices:
-            # Clear screen
-            print(self.term.clear)
-            
-            # Add some padding at the top
-            print("\n")
-            
-            # Display story with clean formatting
-            story_lines = self._wrap_text(self.current_story, self.term.width - 4)
-            for line in story_lines:
-                self.typewriter_effect(line.strip(), style=self.text_color)
-            
-            # Generate next story segment
-            response = self.generate_story()
-            new_story, choices = self.parse_response(response)
-            
-            if not choices:
-                self.typewriter_effect("\nThe aliens stare at you expectantly, their device emitting a sound suspiciously like elevator music...",
-                                     style=self.warning)
-                return False
-            
-            self.current_choices = choices
-            self.current_story = new_story
-            
-            # Update message history
-            self.messages.append({"role": "assistant", "content": new_story})
-            
-            # Add spacing before choices
-            print("\n")
-            
-            # Display choices with clean numbering
+            # Check if we have a current story but no choices (might be from a corrupted save)
+            if self.current_story and self.current_story != self.messages[1]["content"]:
+                # Display warning message
+                warning_msg = "⚠ Quantum state reconstruction in progress..."
+                warning_x = start_x + (box_width - len(warning_msg)) // 2
+                print(self.term.move_xy(warning_x, content_start_y) + self.warning + warning_msg + self.term.normal)
+                content_start_y += 1
+        
+        # Display the story with proper wrapping and centering
+        for line in story_lines:
+            if content_start_y < start_y + box_height - 12:  # Leave space for other elements
+                line_text = line.strip()
+                # Calculate the starting position relative to the box's left border
+                # The text should be centered within the content area (box_width - 8)                
+                text_start = start_x + 4  # Start 4 characters from the left border
+                remaining_space = content_width - len(line_text)
+                if remaining_space > 0:
+                    text_start += remaining_space // 2
+                
+                # Instead of moving and then calling typewriter, pass coordinates to typewriter
+                self.typewriter_effect(line_text, style=self.text_color, x=text_start, y=content_start_y)
+                content_start_y += 1
+        
+        # Calculate the position for choices
+        choice_position_y = content_start_y + 1
+        
+        # Draw a separator before choices
+        self._draw_choice_separator(start_x + 3, choice_position_y, box_width - 6)
+        choice_position_y += 1
+        
+        # Display choices header
+        choice_header = "QUANTUM DECISION PATHS:"
+        choice_header_x = start_x + (box_width - len(choice_header)) // 2
+        print(self.term.move_xy(choice_header_x, choice_position_y) + self.highlight + choice_header + self.term.normal)
+        choice_position_y += 1
+        
+        # Display choices with proper centering
+        if self.current_choices:
             for i, choice in enumerate(self.current_choices, 1):
-                self.typewriter_effect(f"  {i}. {choice}", delay=0.01, style=self.highlight)
-            
-            # Add spacing after choices
-            print("\n")
-            
-            # Display instructions with dimmed text
-            print(self.dim + "Press 1, 2, or 3 to make your choice, or Esc to return to reality." + self.term.normal)
-            print(self.dim + "Press F9 to save your adventure or F10 to load a saved one." + self.term.normal)
+                choice_text = f"│{i}│ ▷ {choice}"
+                wrapped_choice = self._wrap_text(choice_text, text_area_width - 6)
+                
+                for j, line in enumerate(wrapped_choice):
+                    if choice_position_y >= start_y + box_height - 4:
+                        break
+                    
+                    line_text = line.strip()
+                    # Calculate the starting position relative to the box's left border
+                    text_start = start_x + 4  # Start 4 characters from the left border
+                    remaining_space = content_width - len(line_text)
+                    if remaining_space > 0:
+                        text_start += remaining_space // 2
+                    
+                    # Instead of moving and then calling typewriter, pass coordinates to typewriter
+                    self.typewriter_effect(line_text, style=self.highlight, x=text_start, y=choice_position_y)
+                    choice_position_y += 1
+        
+        # Draw a separator after choices if there's room
+        if choice_position_y < start_y + box_height - 3:
+            self._draw_choice_separator(start_x + 3, choice_position_y, box_width - 6)
+            choice_position_y += 1
+        
+        # Display instructions with proper centering
+        if choice_position_y < start_y + box_height - 2:
+            instruction1 = "▷ Press 1, 2, or 3 to select a path"
+            instruction1_x = start_x + (box_width - len(instruction1)) // 2
+            print(self.term.move_xy(instruction1_x, choice_position_y) + self.dim + instruction1 + self.term.normal)
+            choice_position_y += 1
+        
+        if choice_position_y < start_y + box_height - 1:
+            instruction2 = "▷ F9: Save fragment | F10: Load fragment | ESC: Exit"
+            instruction2_x = start_x + (box_width - len(instruction2)) // 2
+            print(self.term.move_xy(instruction2_x, choice_position_y) + self.dim + instruction2 + self.term.normal)
+        
+        # Add decorative elements at the bottom of the box
+        self._add_matrix_decoration(start_x + 2, start_y + box_height - 2, box_width - 4)
+        
         return True
     
+    def _draw_sci_fi_box(self, x, y, width, height, title=""):
+        """Draw a sci-fi themed box with decorative elements."""
+        # Top border with title
+        print(self.term.move_xy(x, y) + self.text_color + "╔" + "═" * (width-2) + "╗" + self.term.normal)
+        
+        if title:
+            # Add glitch effect to title
+            glitch_title = ""
+            for char in title:
+                if random.random() < 0.1:  # 10% chance for each character to glitch
+                    glitch_title += self.anomaly + char + self.text_color
+                else:
+                    glitch_title += char
+            
+            title_pos = x + (width - len(title)) // 2
+            print(self.term.move_xy(title_pos, y) + self.text_color + self.term.bold + " " + glitch_title + " " + self.term.normal)
+        
+        # Side borders with occasional glitch characters
+        for i in range(y+1, y+height-1):
+            # Left border
+            if random.random() < 0.05:  # 5% chance for a glitch character
+                left_char = random.choice("╠╟┣┠")
+                print(self.term.move_xy(x, i) + self.anomaly + left_char + self.term.normal)
+            else:
+                print(self.term.move_xy(x, i) + self.text_color + "║" + self.term.normal)
+            
+            # Right border
+            if random.random() < 0.05:  # 5% chance for a glitch character
+                right_char = random.choice("╣╢┫┨")
+                print(self.term.move_xy(x + width - 1, i) + self.anomaly + right_char + self.term.normal)
+            else:
+                print(self.term.move_xy(x + width - 1, i) + self.text_color + "║" + self.term.normal)
+            
+            # Empty space in between
+            print(self.term.move_xy(x + 1, i) + " " * (width - 2))
+        
+        # Bottom border
+        print(self.term.move_xy(x, y+height-1) + self.text_color + "╚" + "═" * (width-2) + "╝" + self.term.normal)
+    
+    def _add_matrix_decoration(self, x, y, width):
+        """Add Matrix-style character decoration at the specified position."""
+        matrix_chars = "デテトドナニヌネノハバパヒビピフブプヘベペホボポマミムメモヤユヨラリルレロワヲンゴザジズゼゾタダチヂッツヅテデト"
+        decoration = ""
+        
+        for i in range(width):
+            if random.random() < 0.7:  # 70% chance for a character
+                char = random.choice(matrix_chars)
+                # Add color variation
+                if random.random() < 0.2:
+                    decoration += self.anomaly + char + self.term.normal
+                else:
+                    decoration += self.dim + char + self.term.normal
+            else:
+                decoration += " "
+        
+        print(self.term.move_xy(x, y) + decoration)
+    
+    def _draw_choice_separator(self, x, y, width):
+        """Draw a decorative separator before and after choices."""
+        separator = self.dim + "┌" + "─" * (width-2) + "┐" + self.term.normal
+        print(self.term.move_xy(x, y) + separator)
+    
     def _wrap_text(self, text, width):
-        """Wrap text to fit within specified width"""
+        """Improved text wrapping function to ensure text stays within specified width.
+        Handles long words by breaking them if necessary."""
+        if not text:
+            return []
+            
         words = text.split()
         lines = []
         current_line = []
+        current_length = 0
         
         for word in words:
-            if current_line and len(' '.join(current_line + [word])) > width:
-                lines.append(' '.join(current_line))
-                current_line = [word]
+            # Check if adding this word would exceed the width
+            word_length = len(word)
+            
+            # If the word itself is longer than the width, we need to break it
+            if word_length > width:
+                # If we have existing content on the line, add it first
+                if current_line:
+                    lines.append(' '.join(current_line))
+                    current_line = []
+                    current_length = 0
+                
+                # Break the long word across multiple lines
+                for i in range(0, word_length, width):
+                    chunk = word[i:i + width]
+                    if i + width < word_length:  # Not the last chunk
+                        lines.append(chunk + "-")
+                    else:  # Last chunk
+                        current_line = [chunk]
+                        current_length = len(chunk)
             else:
-                current_line.append(word)
+                # Normal case - check if word fits on current line
+                if current_line and current_length + word_length + 1 > width:
+                    lines.append(' '.join(current_line))
+                    current_line = [word]
+                    current_length = word_length
+                else:
+                    current_line.append(word)
+                    if current_length == 0:
+                        current_length = word_length
+                    else:
+                        current_length += word_length + 1  # +1 for the space
         
+        # Add the last line if it has content
         if current_line:
             lines.append(' '.join(current_line))
         
@@ -515,7 +796,7 @@ Choices:
         return f"save_{timestamp}"
     
     def save_story(self, save_id=None, title=None):
-        """Save the current story state to a JSON file with specified ID"""
+        """Save the current story state to a JSON file with specified ID using batch writing"""
         try:
             # Generate save ID if not provided
             if not save_id:
@@ -541,68 +822,57 @@ Choices:
                 print("Please check permissions or choose a different save location.")
                 return False
             
-            # Generate a detailed summary for the save file
-            story_summary = "Cosmic horror adventure in progress..."
-            if len(self.messages) > 3:
-                try:
-                    # Try to get a complete story summary
-                    full_summary = self.summarizer.generate_summary(self.messages)
-                    story_summary = full_summary
+            # Get current timestamp - ensure this is set for all saves
+            current_timestamp = datetime.datetime.now().isoformat()
+            
+            # Load existing save data if it exists
+            if os.path.exists(filepath):
+                with open(filepath, 'r+', encoding='utf-8') as f:
+                    existing_state = json.load(f)
+                    last_saved_index = existing_state.get('last_saved_index', 0)
                     
-                    # Extract the last 1-2 paragraphs for a more relevant preview
-                    paragraphs = full_summary.split('\n\n')
-                    if len(paragraphs) > 1:
-                        story_summary = '\n\n'.join(paragraphs[-2:])
+                    # Prepare new messages to append
+                    new_messages = self.messages[last_saved_index:]
                     
-                    # If still too long, take the last paragraph
-                    if len(story_summary) > 500:
-                        story_summary = paragraphs[-1]
+                    # Update last saved index
+                    last_saved_index = len(self.messages)
                     
-                    # Add "..." at the beginning to indicate it's a partial summary
-                    if story_summary != full_summary:
-                        story_summary = "...\n\n" + story_summary
-                        
-                except Exception as e:
-                    if self.debug:
-                        print(f"Error generating save summary: {e}")
+                    # Append new messages to the existing state
+                    existing_state['messages'].extend(new_messages)
+                    existing_state['last_saved_index'] = last_saved_index
                     
-                    # Fallback: Use the current story segment
-                    story_summary = self.current_story
-                    if len(story_summary) > 500:
-                        story_summary = "..." + story_summary[-500:]
-            
-            # Create save timestamp
-            timestamp = datetime.datetime.now().isoformat()
-            
-            # Use provided title or generate a default one
-            if not title:
-                title = f"Reality Glitch - {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}"
-            
-            # Extract current player choices for context
-            current_choices_text = ""
-            if self.current_choices:
-                current_choices_text = "\n\nCurrent choices:\n" + "\n".join([f"- {choice}" for choice in self.current_choices])
-            
-            # Prepare state to save
-            state = {
-                "messages": self.messages,
-                "current_story": self.current_story,
-                "current_choices": self.current_choices,
-                "summary_count": self.summary_count,
-                "timestamp": timestamp,
-                "title": title,
-                "summary": story_summary,
-                "choices_preview": current_choices_text,
-                "save_id": save_id
-            }
-            
-            # Save to file
-            with open(filepath, 'w', encoding='utf-8') as f:
-                json.dump(state, f, ensure_ascii=False, indent=2)
+                    # IMPORTANT: Always update current_story and current_choices to reflect current game state
+                    existing_state['current_story'] = self.current_story
+                    existing_state['current_choices'] = self.current_choices
+                    existing_state['choices_preview'] = "\n\nCurrent choices:\n" + "\n".join([f"- {choice}" for choice in self.current_choices])
+                    
+                    # Always update timestamp when saving
+                    existing_state['timestamp'] = current_timestamp
+                    
+                    f.seek(0)
+                    json.dump(existing_state, f, ensure_ascii=False, indent=2)
+                    f.truncate()
+            else:
+                # If no existing file, create a new state
+                state = {
+                    "messages": self.messages,
+                    "current_story": self.current_story,
+                    "current_choices": self.current_choices,
+                    "summary_count": self.summary_count,
+                    "timestamp": current_timestamp,
+                    "title": title or f"Reality Glitch - {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}",
+                    "summary": "Cosmic horror adventure in progress...",
+                    "choices_preview": "\n\nCurrent choices:\n" + "\n".join([f"- {choice}" for choice in self.current_choices]),
+                    "save_id": save_id,
+                    "last_saved_index": len(self.messages)
+                }
+                with open(filepath, 'w', encoding='utf-8') as f:
+                    json.dump(state, f, ensure_ascii=False, indent=2)
             
             # Print save location for reference
             if self.debug:
                 print(f"Story saved successfully to: {os.path.abspath(filepath)}")
+                print(f"Save timestamp: {current_timestamp}")
             
             return True
         except Exception as e:
@@ -620,7 +890,7 @@ Choices:
         return messages
 
     def load_story(self, save_id=None):
-        """Load a story state from a JSON file"""
+        """Load a story state from a JSON file, updating legacy saves if necessary"""
         try:
             # If no ID provided, try to use the current save_id or the default
             if not save_id:
@@ -647,35 +917,96 @@ Choices:
                 print(f"\033[33mSave file does not exist: {os.path.abspath(filepath)}\033[0m")
                 return False
             
-            with open(filepath, 'r', encoding='utf-8') as f:
+            with open(filepath, 'r+', encoding='utf-8') as f:
                 state = json.load(f)
-            
-            # Validate the state has the required fields
-            required_fields = ["messages", "current_story", "current_choices"]
-            if not all(key in state for key in required_fields):
-                print("\033[31mSave file is missing required fields\033[0m")
-                return False
-            
-            # Apply the loaded state (keeping full history)
-            self.messages = state["messages"]
-            self.current_story = state["current_story"]
-            self.current_choices = state["current_choices"]
-            
-            # Load summary count if available (for backward compatibility)
-            if "summary_count" in state:
-                self.summary_count = state["summary_count"]
-            else:
-                # If no summary count, estimate based on message count
-                self.summary_count = len(state["messages"]) // 10
-            
-            # Store the current save_id
-            self.save_id = save_id
-            
-            if self.debug:
-                print(f"Successfully loaded story from: {os.path.abspath(filepath)}")
-                print(f"Loaded {len(self.messages)} messages from save file")
-            
-            return True
+                
+                # Check for legacy save format
+                if 'last_saved_index' not in state:
+                    # Assume all messages are new if last_saved_index is missing
+                    state['last_saved_index'] = len(state['messages'])
+                    f.seek(0)
+                    json.dump(state, f, ensure_ascii=False, indent=2)
+                    f.truncate()
+                    if self.debug:
+                        print("Updated legacy save format with last_saved_index.")
+                
+                # Validate the state has the required fields
+                required_fields = ["messages", "current_story", "current_choices"]
+                if not all(key in state for key in required_fields):
+                    print("\033[31mSave file is missing required fields\033[0m")
+                    return False
+                
+                # Apply the loaded state (keeping full history)
+                self.messages = state["messages"]
+                
+                # IMPORTANT: Verify that current_story and current_choices match the last message exchange
+                # If they don't match, reconstruct them from the message history
+                if len(self.messages) >= 2:
+                    last_assistant_message = None
+                    last_user_message = None
+                    
+                    # Find the last assistant message with story and choices
+                    for i in range(len(self.messages) - 1, 0, -1):
+                        msg = self.messages[i]
+                        if msg["role"] == "assistant" and "Story:" in msg["content"] and "Choices:" in msg["content"]:
+                            last_assistant_message = msg
+                            break
+                        elif msg["role"] == "user" and last_user_message is None:
+                            last_user_message = msg
+                    
+                    # If we found a valid last message, extract story and choices from it
+                    if last_assistant_message:
+                        # Parse the story and choices from the last assistant message
+                        extracted_story, extracted_choices = self.parse_response(last_assistant_message["content"])
+                        
+                        # Update the current state to match the last message
+                        self.current_story = extracted_story
+                        self.current_choices = extracted_choices
+                        
+                        # Also update the state in the file for consistency, but don't change timestamp
+                        need_to_update = False
+                        if state.get('current_story') != extracted_story:
+                            state['current_story'] = extracted_story
+                            need_to_update = True
+                            
+                        if state.get('current_choices') != extracted_choices:
+                            state['current_choices'] = extracted_choices
+                            state['choices_preview'] = "\n\nCurrent choices:\n" + "\n".join([f"- {choice}" for choice in extracted_choices])
+                            need_to_update = True
+                            
+                        # Only update the file if necessary, and don't touch the timestamp
+                        if need_to_update:
+                            f.seek(0)
+                            json.dump(state, f, ensure_ascii=False, indent=2)
+                            f.truncate()
+                    else:
+                        # If we couldn't extract from messages, use what's in the file
+                        self.current_story = state["current_story"]
+                        self.current_choices = state["current_choices"]
+                else:
+                    # Use the values from the file if not enough messages
+                    self.current_story = state["current_story"]
+                    self.current_choices = state["current_choices"]
+                
+                # Load summary count if available (for backward compatibility)
+                if "summary_count" in state:
+                    self.summary_count = state["summary_count"]
+                else:
+                    # If no summary count, estimate based on message count
+                    self.summary_count = len(state["messages"]) // 10
+                
+                # Store the current save_id
+                self.save_id = save_id
+                
+                # Note: We no longer update the timestamp during load
+                # This was causing timestamps to change when loading, when they should
+                # only change when saving
+                
+                if self.debug:
+                    print(f"Successfully loaded story from: {os.path.abspath(filepath)}")
+                    print(f"Loaded {len(self.messages)} messages from save file")
+                
+                return True
         except Exception as e:
             print(f"\033[31mError loading story: {e}\033[0m")
             if 'filepath' in locals():
@@ -745,6 +1076,9 @@ Choices:
         self.current_choices = []
         self.save_id = None  # Clear the current save ID when resetting
         self.summary_count = 0  # Reset summary count
+        
+        # Refresh reality data
+        self.reality_data.refresh_data()
         
         if self.debug:
             print("Story engine reset to initial state")

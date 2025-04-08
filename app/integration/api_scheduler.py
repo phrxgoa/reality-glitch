@@ -10,8 +10,15 @@ sys.path.append(str(Path(__file__).parent.parent))
 # Import the function from your sync script
 from integration.sync_apis import SyncApis
 
-# Configure logging for the scheduler itself (optional)
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# Configure logging to be silent unless critical errors
+logging.basicConfig(
+    level=logging.ERROR,  # Only show ERROR and above
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        # Add a null handler to prevent console output
+        logging.NullHandler()
+    ]
+)
 
 if __name__ == '__main__':
     scheduler = BlockingScheduler()
@@ -19,12 +26,10 @@ if __name__ == '__main__':
     sync_apis = SyncApis()
     scheduler.add_job(sync_apis.sync_all, 'interval', minutes=10, id='data_sync_job', replace_existing=True)
 
-    logging.info("\n#### Starting scheduler. Press Ctrl+C to exit. ####\n")
-
+    # No logging here, should be silent
     try:
         # Start the scheduler (this blocks execution)
         scheduler.start()
     except (KeyboardInterrupt, SystemExit):
-        # Handle graceful shutdown
-        logging.info("Scheduler stopped.")
+        # Silent shutdown
         scheduler.shutdown()

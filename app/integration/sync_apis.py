@@ -31,53 +31,55 @@ class SyncApis:
         self.db_ops = DatabaseOperations()
     
     def sync_all(self):
-        """Sync data from all APIs to the database."""
-        print("Starting Reality Glitch data synchronization...")
+        """Sync data from all APIs to the database."""        
         
         # Collect and save data from each API
         try:
-            # FMP API - Get index quotes
-            print("Fetching FMP index quotes...")
+            # FMP API - Get index quotes            
             index_quotes = self.fmp_api.get_index_quotes()
-            if index_quotes:
-                print(f"Retrieved {len(index_quotes)} index quotes")
+            if index_quotes:                
                 if save_fmp_index_data(index_quotes):
-                    print("Successfully saved FMP index data to database")
+                    pass
+                    #print("Successfully saved FMP index data to database")
                 else:
-                    print("Failed to save FMP index data to database")
+                    pass
+                    #print("Failed to save FMP index data to database")
             else:
-                print("Failed to retrieve FMP index quotes")
+                pass
+                #print("Failed to retrieve FMP index quotes")
             
-            # Weather API - Get weather data
-            print("\nFetching weather data...")
+            # Weather API - Get weather data            
             weather_data = self.weather_api.get_weather_data()
-            if weather_data:
-                print("Retrieved weather data")
+            if weather_data:                
                 if save_weather_data(weather_data):
-                    print("Successfully saved weather data to database")
+                    pass
+                    #print("Successfully saved weather data to database")
                 else:
-                    print("Failed to save weather data to database")
+                    pass
+                    #print("Failed to save weather data to database")
             else:
-                print("Failed to retrieve weather data")
+                pass
+                #print("Failed to retrieve weather data")
             
-            # CoinMarket API - Get Bitcoin data
-            print("\nFetching Bitcoin data...")
+            # CoinMarket API - Get Bitcoin data            
             bitcoin_data = self.coinmarket_api.get_bitcoin_data()
-            if bitcoin_data:
-                print("Retrieved Bitcoin data")
+            if bitcoin_data:                
                 if save_bitcoin_data(bitcoin_data):
-                    print("Successfully saved Bitcoin data to database")
+                    pass
+                    #print("Successfully saved Bitcoin data to database")
                 else:
-                    print("Failed to save Bitcoin data to database")
+                    pass
+                    #print("Failed to save Bitcoin data to database")
             else:
-                print("Failed to retrieve Bitcoin data")
+                pass
+                #print("Failed to retrieve Bitcoin data")
             
             # Update the last sync time after successful completion
-            self.db_ops.update_last_sync_time()
-            print("\nSuccessfully updated last sync time")
+            self.db_ops.update_last_sync_time()            
         
         except Exception as e:
-            print(f"Error in sync_all function: {e}")
+            pass
+           # print(f"Error in sync_all function: {e}")
 
 if __name__ == "__main__":
     SyncApis() 

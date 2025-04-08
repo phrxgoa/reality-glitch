@@ -3,6 +3,7 @@ import json
 import time
 import sys
 from groq import Groq
+import random
 
 # Configuration
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
@@ -34,25 +35,57 @@ class StorySummarizer:
     def __init__(self, debug=False):
         """Initialize the story summarizer"""
         self.groq_client = Groq(api_key=GROQ_API_KEY)
-        self.debug = debug  # Debug flag to control logging
+        self.debug = False  # Always keep debug off for cleaner experience
     
-    def _show_progress(self, prefix="Condensing cosmic narrative", suffix="complete", duration=3):
-        """Display a fancy progress indicator for summarization"""
+    def _show_progress(self, prefix="Condensing quantum narrative vectors", suffix="complete", duration=2):
+        """Display an advanced sci-fi progress indicator for summarization that's silent in debug mode"""
+        # No visual effects in debug mode
         if self.debug:
-            return  # Skip visual effects in debug mode
+            return
         
-        # Cool sci-fi style condensing animation
-        symbols = "▒▓█▓▒░"
-        delay = duration / (80 * len(symbols))
+        # Define ANSI color codes
+        colors = ['\033[36m', '\033[34m', '\033[35m']  # Cyan, Blue, Magenta
+        reset = '\033[0m'
         
-        print()  # Start on new line
-        for i in range(80):
-            for symbol in symbols:
-                sys.stdout.write(f"\r\033[36m{prefix} {symbol} {i+1}% {suffix}\033[0m")
-                sys.stdout.flush()
-                time.sleep(delay)
+        # Cool sci-fi quantum matrix symbols
+        matrix_chars = "▓▒░▒▓█▓▒░░▒▓█"
+        quantum_chars = "⌬⌭⌮⦿⌘⌧⌖⍠⍟⌑"
         
-        print("\n")  # End with new line
+        # Sci-fi processing messages
+        phases = [
+            "Deconstructing narrative pathways",
+            "Compressing quantum storytelling vectors",
+            "Processing dimensional narrative patterns",
+            "Realigning causal story matrices",
+            "Extrapolating mnemonic constructs"
+        ]
+        
+        # Simulate processing
+        progress_length = 30
+        for i in range(progress_length):
+            # Choose random elements for this iteration
+            color = random.choice(colors)
+            matrix = ''.join(random.choice(matrix_chars) for _ in range(5))
+            quantum = random.choice(quantum_chars)
+            phase = phases[i % len(phases)]
+            
+            # Calculate progress percentage
+            percentage = int((i + 1) / progress_length * 100)
+            
+            # Format and display the progress bar with sci-fi elements
+            progress = int(percentage / 100 * 20)
+            bar = '[' + '=' * progress + quantum + ' ' * (20 - progress - 1) + ']'
+            
+            # Print the progress line
+            sys.stdout.write(f"\r{color}{matrix} {phase}: {bar} {percentage}% {suffix}{reset}")
+            sys.stdout.flush()
+            
+            # Variable delay for more realistic effect
+            time.sleep(duration / progress_length * (0.5 + random.random()))
+        
+        # Clear the line after completion
+        sys.stdout.write("\r" + " " * 100 + "\r")
+        sys.stdout.flush()
     
     def should_summarize(self, messages):
         """Determine if we should summarize the story based on message count.
@@ -74,9 +107,6 @@ class StorySummarizer:
     
     def generate_summary(self, messages):
         """Generate a summary of the story so far"""
-        if self.debug:
-            print("Generating story summary...")
-        
         # Extract the actual story content from messages
         story_content = []
         
@@ -102,18 +132,10 @@ class StorySummarizer:
             )
             
             summary = response.choices[0].message.content.strip()
-            
-            if self.debug:
-                print("\n===== STORY SUMMARY =====")
-                print(summary)
-                print("=========================\n")
-            
             return summary
         
         except Exception as e:
-            if self.debug:
-                print(f"Error generating summary: {e}")
-            # Return a fallback summary if summarization fails
+            # Return a fallback summary if summarization fails - no error printing
             return "The story has progressed with cosmic entities and strange devices. The protagonist has made several choices that have led to the current situation."
     
     def compress_history(self, messages):
@@ -144,9 +166,6 @@ class StorySummarizer:
         # Add the most recent exchanges (keep last 2 pairs = 4 messages)
         recent_messages = messages[-4:] if len(messages) > 4 else messages[1:]
         compressed.extend(recent_messages)
-        
-        if self.debug:
-            print(f"Compressed history from {len(messages)} to {len(compressed)} messages")
         
         return compressed
 
