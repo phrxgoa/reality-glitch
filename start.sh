@@ -59,5 +59,14 @@ docker compose build --no-cache > /dev/null 2>&1 && docker compose up -d --remov
 python app/integration/api_scheduler.py > /dev/null 2>&1 &
 scheduler_pid=$!
 
-# Run the game in the foreground
-python app/game.py
+# Set the Python path to include the project root
+export PYTHONPATH=$(pwd)
+
+# Check if debug mode was requested
+if [ "$1" = "--debug" ]; then
+    echo "Starting Reality Glitch in debug mode..."
+    python app/game.py --debug
+else
+    echo "Starting Reality Glitch..."
+    python app/game.py
+fi

@@ -1,0 +1,7 @@
+python-dotenv
+groq
+prompt-toolkit
+requests
+psycopg2-binary
+APScheduler
+blessed
